@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Movies - Movie Recommendation API</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-6">
+    <div class="max-w-2xl mx-auto bg-white p-6 rounded-lg shadow-md">
+        <h1 class="text-2xl font-bold mb-4">Movie Recommendation</h1>
+        <div class="mb-4">
+            <button onclick="logout()" class="bg-red-500 text-white p-2 rounded">Logout</button>
+        </div>
+        <div class="mb-4">
+            <h2 class="text-lg font-semibold">Movies</h2>
+            <button onclick="getMovies()" class="bg-green-500 text-white p-2 rounded mr-2">Get All Movies</button>
+            <button onclick="getTrending()" class="bg-green-500 text-white p-2 rounded mr-2">Get Trending</button>
+            <button onclick="getRecommendations()" class="bg-green-500 text-white p-2 rounded">Get Recommendations</button>
+        </div>
+        <div class="mb-4">
+            <h2 class="text-lg font-semibold">Rate Movie</h2>
+            <input id="movie-id" type="number" placeholder="Movie ID" class="border p-2 w-full mb-2 rounded">
+            <input id="rating" type="number" placeholder="Rating (1-5)" class="border p-2 w-full mb-2 rounded">
+            <button onclick="rateMovie()" class="bg-purple-500 text-white p-2 rounded">Rate</button>
+        </div>
+        <div id="output" class="mt-4 p-4 bg-gray-200 rounded"></div>
+    </div>
+
+    <script>
+        const token = localStorage.getItem('token');
+        if (!token) {
+            window.location.href = '/login.html';
+        }
+
+        function logout() {
+            localStorage.removeItem('token');
+            window.location.href = '/login.html';
+        }
+
+        async function getMovies() {
+            try {
+                const response = await fetch('/movies', {
+                    headers: { 'Authorization': token }
+                });
+                const data = await response.json();
+                document.getElementById('output').innerText = JSON.stringify(data, null, 2);
+            } catch (error) {
+                document.getElementById('output').innerText = 'Error: ' + error.message;
+            }
+        }
+
+        async function getTrending() {
+            try {
+                const response = await fetch('/movies/trending', {
+                    headers: { 'Authorization': token }
+                });
+                const data = await response.json();
+                document.getElementById('output').innerText = JSON.stringify(data, null, 2);
+            } catch (error) {
+                document.getElementById('output').innerText = 'Error: ' + error.message;
+            }
+        }
+
+        async function getRecommendations() {
+            try {
+                const response = await fetch('/movies/recommend', {
+                    headers: { 'Authorization': token }
+                });
+                const data = await response.json();
+                document.getElementById('output').innerText = JSON.stringify(data, null, 2);
+            } catch (error) {
+                document.getElementById('output').innerText = 'Error: ' + error.message;
+            }
+        }
+
+        async function rateMovie() {
+            if (!token) {
+                document.getElementById('output').innerText = 'Please login to rate movies';
+                setTimeout(() => window.location.href = '/login.html', 1000);
+                return;
+            }
+
+            const movieId = document.getElementById('movie-id').value;
+            const rating = document.getElementById('rating').value;
+
+            if (!movieId || !rating) {
+                document.getElementById('output').innerText = 'Please fill in all fields';
+                return;
+            }
+
+            try {
+                const response = await fetch('/movies/rate', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': token 
+                    },
+                    body: JSON.stringify({ movie_id: parseInt(movieId), rating: parseInt(rating) })
+                });
+                const data = await response.json();
+                document.getElementById('output').innerText = JSON.stringify(data, null, 2);
+            } catch (error) {
+                document.getElementById('output').innerText = 'Error: ' + error.message;
+            }
+        }
+    </script>
+</body>
+</html>
