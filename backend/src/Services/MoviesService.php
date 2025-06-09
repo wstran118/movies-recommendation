@@ -17,9 +17,14 @@ class MoviesService
 
     public function getMovies(): array
     {
+        $starttime = microtime(true);
         $stmt = $this->db->query("SELECT * FROM movies");
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
+        $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        //log
+        $execution_time = microtime(true) - $starttime;
+        $this->logActivity(null, 'GET_MOVIES', 'Retrieved all movies', $execution_time);
+        return $result;
+    }//
 
     public function rateMovie(array $data, int $userId): array
     {
@@ -30,6 +35,7 @@ class MoviesService
             throw new Exception('Rating must be between 1 and 5', 400);
         }
 
+        $starttime = microtime(true);
         $stmt = $this->db->prepare(<<<'SQL'
             INSERT INTO ratings (user_id, movie_id, rating)
             VALUES (:user_id, :movie_id, :rating)
@@ -40,11 +46,16 @@ class MoviesService
             'movie_id' => $movieId,
             'rating' => $rating
         ]);
+
+        //log
+        $execution_time = microtime(true) - $starttime;
+        $this->logActivity($userId, 'RATE_MOVIE', "User rated movie ID $movieId with $rating", $execution_time);
         return ['message' => 'Rating submitted successfully'];
     }
 
     public function getRecommendations(?string $userId): array
     {
+        $starttime = microtime(true);
         if ($userId) {
             $stmt = $this->db->prepare(<<<'SQL'
                 SELECT m.*
@@ -65,6 +76,10 @@ class MoviesService
             SQL);
             $stmt->execute(['user_id' => $userId]);
             $movies = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            //log
+            $execution_time = microtime(true) - $starttime;
+            $this->logActivity($userId, 'GET_RECOMMENDATIONS', "Retrieved recommendations for user $userId", $execution_time);
             return $movies ?: $this->getTrendingMovies();
         }
         return $this->getTrendingMovies();
@@ -72,6 +87,7 @@ class MoviesService
 
     public function getTrendingMovies(): array
     {
+        $starttime = microtime(true);
         $stmt = $this->db->query(<<<'SQL'
             SELECT m.*, AVG(r.rating) as avg_rating
             FROM movies m
@@ -80,7 +96,24 @@ class MoviesService
             ORDER BY avg_rating DESC NULLS LAST, m.id
             LIMIT 5
         SQL);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        //log
+        $execution_time = microtime(true) - $starttime;
+        $this->logActivity(null, 'GET_TRENDING', "Retrieved trending movies", $execution_time);
+         return $result;
+    }// end getTrendingMovvies()
+
+    private function logActivity(?int $userId, string $action, string $description, float $execution_time): void
+    {
+        $stmt = $this->db->prepare("INSERT INTO activity_logs (user_id, action, description, execution_time_ms, craeted_at ) 
+                                    VALUES (:user_id, :action, :description, :execution_time_ms, NOW())");
+        $stmt->execute([
+            "user_id"=> $userId,
+            "action"=> $action,
+            "description" => $description,
+            "execution_time_ms" => round($execution_time * 10,2)
+        ]);
     }
 }
 ?>

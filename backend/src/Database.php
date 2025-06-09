@@ -20,7 +20,10 @@ class Database {
             throw new Exception('Database connection failed: ' . $e->getMessage(), 500);
         }
     }
+
+    public function getConnection(): PDO {
+        return $this->db;
+    }
+
 }
-
-
 ?>
